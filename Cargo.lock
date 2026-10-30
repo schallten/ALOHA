@@ -19,6 +19,7 @@ dependencies = [
  "fluxer-builders",
  "fluxer-core",
  "fluxer-rest",
+ "fluxer-types",
  "serde_json",
  "tokio",
  "tracing",

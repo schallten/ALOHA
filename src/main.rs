@@ -2,6 +2,7 @@ use fluxer_builders::{EmbedBuilder, MessagePayload};
 use fluxer_core::client::typed_events::DispatchEvent;
 use fluxer_core::client::{Client, ClientOptions};
 use fluxer_rest::Rest;
+use fluxer_types::gateway::{GatewayActivity, GatewayCustomStatus, GatewayPresenceUpdateSendData};
 
 #[tokio::main]
 async fn main() {
@@ -11,19 +12,37 @@ async fn main() {
 
     let token = std::env::var("FLUXER_TOKEN").expect("set FLUXER_TOKEN env var");
 
+    // let v:Vec<GatewayActivity>
+    // 1. Create individual activities
+    let activity1 = GatewayActivity {
+        name: String::from("Playing Rust"),
+        kind: 0,
+        url: None,
+    };
+
+    let activity2 = GatewayActivity {
+        name: String::from("Streaming"),
+        kind: 1,
+        url: Some(String::from("https://twitch.tv")),
+    };
+
+    // 2. Put them into a vector
+    let my_activities: Vec<GatewayActivity> = vec![activity1, activity2];
+
     let options = ClientOptions {
         intents: 0,
         wait_for_guilds: true,
-        presence: Some(
-            serde_json::from_value(serde_json::json!({
-                "status": "online",
-                "afk": false,
-                "custom_status": {
-                    "text": "Hello everyone!"
-                }
-            }))
-            .expect("Invalid presence"),
-        ),
+        presence: Some(GatewayPresenceUpdateSendData {
+            since: None,
+            activities: Some(my_activities),
+            custom_status: Some(GatewayCustomStatus {
+                text: Some(String::from("Hello everyone!")),
+                emoji_name: Some(String::from("grin")),
+                emoji_id: None,
+            }),
+            status: String::from("online"),
+            afk: Some(true),
+        }),
         ..Default::default()
     };
 
