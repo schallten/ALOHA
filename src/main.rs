@@ -14,6 +14,16 @@ async fn main() {
     let options = ClientOptions {
         intents: 0,
         wait_for_guilds: true,
+        presence: Some(
+            serde_json::from_value(serde_json::json!({
+                "status": "online",
+                "afk": false,
+                "custom_status": {
+                    "text": "Hello everyone!"
+                }
+            }))
+            .expect("Invalid presence"),
+        ),
         ..Default::default()
     };
 

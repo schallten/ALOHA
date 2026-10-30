@@ -11,3 +11,4 @@ fluxer-builders = "0.3.1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+serde_json = "1.0.154"
