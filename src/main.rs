@@ -1,40 +1,53 @@
-// import the Fluxer client library
+use fluxer_builders::{EmbedBuilder, MessagePayload};
 use fluxer_core::client::typed_events::DispatchEvent;
 use fluxer_core::client::{Client, ClientOptions};
+use fluxer_rest::Rest;
 
-// tokio::main lets us use async/await in main
 #[tokio::main]
 async fn main() {
-    // load variables from .env file
     dotenvy::dotenv().ok();
 
-    // set up logging so we can see info/error messages
     tracing_subscriber::fmt().with_env_filter("info").init();
 
-    // grab the bot token from the environment variable
     let token = std::env::var("FLUXER_TOKEN").expect("set FLUXER_TOKEN env var");
 
-    // configure how the bot connects
     let options = ClientOptions {
-        intents: 0,            // no special gateway intents needed yet
-        wait_for_guilds: true, // wait until server data is loaded
-        ..Default::default()   // use defaults for everything else
+        intents: 0,
+        wait_for_guilds: true,
+        ..Default::default()
     };
 
-    // create the bot client
     let mut client = Client::new(options);
+    let rest: Rest = client.rest.clone();
 
-    // register an event handler that runs on every gateway event
     client.on_typed(move |event| {
+        let rest = rest.clone();
+
         Box::pin(async move {
-            // when the bot is ready, log it
-            if let DispatchEvent::Ready = event {
-                tracing::info!("ALOHA is online");
+            match event {
+                DispatchEvent::Ready => {
+                    tracing::info!("ALOHA is online");
+                }
+
+                DispatchEvent::MessageCreate { message, .. } => {
+                    if message.content.trim() == "!ping" {
+                        let embed = EmbedBuilder::new().title("Pong").color(0x5865F2).build();
+
+                        let payload = MessagePayload::new().add_embed(embed).build();
+
+                        if let Err(e) = message.send(&rest, &payload).await {
+                            tracing::error!("send {e}");
+                        }
+                    }
+                }
+
+                _ => {
+                    tracing::info!("Received another event");
+                }
             }
         })
     });
 
-    // connect to Fluxer with the token (stays running / online)
     if let Err(e) = client.login(&token).await {
         tracing::error!("login failed: {e:?}");
     }

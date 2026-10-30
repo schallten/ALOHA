@@ -16,7 +16,9 @@ name = "aloha"
 version = "0.1.0"
 dependencies = [
  "dotenvy",
+ "fluxer-builders",
  "fluxer-core",
+ "fluxer-rest",
  "tokio",
  "tracing",
  "tracing-subscriber",
