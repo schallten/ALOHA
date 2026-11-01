@@ -67,7 +67,7 @@ async fn main() {
                     if message.content.trim() == "!ping" {
                         let embed = EmbedBuilder::new().title("Pong").color(0x5865F2).build();
 
-                        let payload = MessagePayload::new().add_embed(embed).build();
+                        let payload = MessagePayload::new().add_embed(embed).reply(message.channel_id.clone(),message.id.clone(),message.guild_id.clone()).build();
 
                         if let Err(e) = message.send(&rest, &payload).await {
                             tracing::error!("send {e}");
