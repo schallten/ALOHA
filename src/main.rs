@@ -10,6 +10,8 @@ async fn main() {
 
     tracing_subscriber::fmt().with_env_filter("info").init();
 
+    let mut in_call = false;
+
     let token = std::env::var("FLUXER_TOKEN").expect("set FLUXER_TOKEN env var");
 
     // let v:Vec<GatewayActivity>
@@ -50,6 +52,7 @@ async fn main() {
     let rest: Rest = client.rest.clone();
 
     client.on_typed(move |event| {
+
         let rest = rest.clone();
 
         Box::pin(async move {
@@ -67,6 +70,45 @@ async fn main() {
                         if let Err(e) = message.send(&rest, &payload).await {
                             tracing::error!("send {e}");
                         }
+                    }
+                    if message.content.trim() == "!userphone" {
+                        let embed = EmbedBuilder::new().title("Establishing connection").description("Remember to be a nice person").color(0xF54927).build();
+
+                        let payload = MessagePayload::new().add_embed(embed).build();
+
+                        if let Err(e) = message.send(&rest, &payload).await {
+                            tracing::error!("send {e}");
+                        }
+                        println!("on call setting true");
+                        in_call=true;
+                        println!("on call should be true now");
+                        if in_call{
+                            println!("Hello world!");
+                        }
+                    }
+                    if message.content.trim() == "!hangup" {
+                        let embed;
+                        if in_call {
+                            embed = EmbedBuilder::new().title("hanging up ").color(0x27D3F5).build();
+                            println!("in call was true");
+                        }else{
+                            embed = EmbedBuilder::new().title("you weren't in a call ").color(0x27D3F5).build();
+                            println!("in call wasn'tr true");
+                        }
+
+                        let payload = MessagePayload::new().add_embed(embed).build();
+                        if in_call{
+                            in_call = false;
+                            println!("in call should be false now");
+                            if in_call{
+                                println!("didn't become false");
+                            }
+                        }
+
+                        if let Err(e) = message.send(&rest, &payload).await {
+                            tracing::error!("send {e}");
+                        }
+                        
                     }
                 }
 
