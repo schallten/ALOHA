@@ -74,9 +74,13 @@ async fn main() {
                         }
                     }
                     if message.content.trim() == "!userphone" {
+                        println!("user id was {}", message.author.id);
                         let embed = EmbedBuilder::new()
                             .title("Establishing connection")
-                            .description("Remember to be a nice person")
+                            .description(format!(
+                                "Remember to be a nice person <@{}>",
+                                message.author.id
+                            ))
                             .color(0xF54927)
                             .build();
 
