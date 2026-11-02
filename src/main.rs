@@ -8,14 +8,17 @@ use std::sync::{Arc, Mutex}; // for boolean
 use tokio::sync::mpsc; // this is a rust channel 
 
 struct CallManager {
-    user_queue: VecDeque<String>,
+    user_queue: VecDeque<(String, String, String)>,
     active_calls: Vec<(String, String)>,
 }
 
 fn pair_waiting_users(manager: &mut CallManager,tx: &mpsc::Sender<(String, String)>) {
     while manager.user_queue.len() >= 2 {
-        let user1 = manager.user_queue.pop_front().unwrap();
-        let user2 = manager.user_queue.pop_front().unwrap();
+        let (user1, _guild1, _message1) =
+    manager.user_queue.pop_front().unwrap();
+
+let (user2, _guild2, _message2) =
+    manager.user_queue.pop_front().unwrap();
 
         println!("Pair created: {} <-> {}", user1, user2);
 
@@ -39,13 +42,7 @@ async fn main() {
 
     let (tx, mut rx) = mpsc::channel::<(String, String)>(100);
 
-    tokio::spawn(async move{
-        while let Some((user1,user2)) = rx.recv().await {
-            println!("NEW PAIR RECEIVED!");
-            println!("User 1: {}", user1);
-            println!("User 2: {}", user2);
-        }
-    });
+    
 
     tracing_subscriber::fmt().with_env_filter("info").init();
 
@@ -87,7 +84,16 @@ async fn main() {
 
     let mut client = Client::new(options);
     let rest: Rest = client.rest.clone();
+    let _worker_test = rest.clone();
     let call_manager = Arc::clone(&call_manager);
+
+    tokio::spawn(async move{
+        while let Some((user1,user2)) = rx.recv().await {
+            println!("NEW PAIR RECEIVED!");
+            println!("User 1: {}", user1);
+            println!("User 2: {}", user2);
+        }
+    });
 
     client.on_typed(move |event| {
         let rest = rest.clone();
@@ -131,7 +137,7 @@ async fn main() {
                                 a == &user_id || b == &user_id
                             });
 
-                            if manager.user_queue.contains(&user_id) || already_active {
+                            if manager.user_queue.iter().any(|(id, _, _)| id == &user_id) || already_active {
                                 println!("User is already in queue!");
 
                                 (
@@ -144,7 +150,11 @@ async fn main() {
                                     Some("https://media1.tenor.com/m/v52lOlHNtjAAAAAd/ronaldo-cheeky-boy.gif".to_string()),
                                 )
                             } else {
-                                manager.user_queue.push_back(user_id);
+                                manager.user_queue.push_back((
+                                user_id,
+                                message.guild_id.clone().unwrap().to_string(),
+                                message.id.to_string(),
+                            ));
 
                                 println!("User added to queue!");
 
@@ -214,7 +224,7 @@ async fn main() {
                                 if pair_index != usize::MAX {
                                     manager.active_calls.remove(pair_index);
                                 }
-                                manager.user_queue.retain(|id| id != &user_id);
+                                manager.user_queue.retain(|(id, _, _)| id != &user_id);
                             }
                             EmbedBuilder::new()
                                 .title("Hanging up")
@@ -225,7 +235,7 @@ async fn main() {
                             println!("in call wasn't true");
                             {
                                 let mut manager = call_manager.lock().unwrap();
-                                manager.user_queue.retain(|id| id != &user_id);
+                                manager.user_queue.retain(|(id, _, _)| id != &user_id);
                             }
                             EmbedBuilder::new()
                                 .title("you weren't in a call")
