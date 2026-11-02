@@ -3,15 +3,25 @@ use fluxer_core::client::typed_events::DispatchEvent;
 use fluxer_core::client::{Client, ClientOptions};
 use fluxer_rest::Rest;
 use fluxer_types::gateway::{GatewayActivity, GatewayCustomStatus, GatewayPresenceUpdateSendData};
+use std::collections::VecDeque;
 use std::sync::{Arc, Mutex}; // for boolean
+
+struct CallManager {
+    user_queue: VecDeque<String>,
+    active_calls: Vec<(String, String)>,
+}
 
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
 
-    tracing_subscriber::fmt().with_env_filter("info").init();
+    // stack to hold users
+    let call_manager = Arc::new(Mutex::new(CallManager {
+        user_queue: VecDeque::new(),
+        active_calls: Vec::new(),
+    }));
 
-    let in_call = Arc::new(Mutex::new(false));
+    tracing_subscriber::fmt().with_env_filter("info").init();
 
     let token = std::env::var("FLUXER_TOKEN").expect("set FLUXER_TOKEN env var");
 
@@ -51,11 +61,11 @@ async fn main() {
 
     let mut client = Client::new(options);
     let rest: Rest = client.rest.clone();
-    let in_call = Arc::clone(&in_call);
+    let call_manager = Arc::clone(&call_manager);
 
     client.on_typed(move |event| {
         let rest = rest.clone();
-        let in_call = Arc::clone(&in_call);
+        let call_manager = Arc::clone(&call_manager);
 
         Box::pin(async move {
             match event {
@@ -67,67 +77,124 @@ async fn main() {
                     if message.content.trim() == "!ping" {
                         let embed = EmbedBuilder::new().title("Pong").color(0x5865F2).build();
 
-                        let payload = MessagePayload::new().add_embed(embed).reply(message.channel_id.clone(),message.id.clone(),message.guild_id.clone()).build();
-
-                        if let Err(e) = message.send(&rest, &payload).await {
-                            tracing::error!("send {e}");
-                        }
-                    }
-                    if message.content.trim() == "!userphone" {
-                        println!("user id was {}", message.author.id);
-                        let embed = EmbedBuilder::new()
-                            .title("Establishing connection")
-                            .description(format!(
-                                "Remember to be a nice person <@{}>",
-                                message.author.id
-                            ))
-                            .color(0xF54927)
+                        let payload = MessagePayload::new()
+                            .add_embed(embed)
+                            .reply(
+                                message.channel_id.clone(),
+                                message.id.clone(),
+                                message.guild_id.clone(),
+                            )
                             .build();
 
-                        let payload = MessagePayload::new().add_embed(embed).build();
-
                         if let Err(e) = message.send(&rest, &payload).await {
                             tracing::error!("send {e}");
                         }
-                        println!("on call setting true");
-                        // in_call = true;
-                        println!("on call should be true now");
-                        *in_call.lock().unwrap() = true;
-
-                        if *in_call.lock().unwrap() {
-                            println!("Hello world!");
-                        }
                     }
+                    
+                    if message.content.trim() == "!userphone" {
+    println!("user id was {}", message.author.id);
+
+    let user_id = message.author.id.to_string();
+
+    let (title, description, color) = {
+        let mut manager = call_manager.lock().unwrap();
+
+        if manager.user_queue.contains(&user_id) {
+            println!("User is already in queue!");
+
+            (
+                "Already in Queue",
+                format!(
+                    "You're already in the queue, <@{}>!\nPlease wait for your turn.",
+                    message.author.id
+                ),
+                0xF1C40F,
+            )
+        } else {
+            manager.user_queue.push_back(user_id);
+
+            println!("User added to queue!");
+
+            (
+                "Successfully Joined",
+                format!(
+                    "You have successfully joined the queue, <@{}>!\nPlease wait while we establish your connection.",
+                    message.author.id
+                ),
+                0x2ECC71,
+            )
+        }
+    };
+
+    let embed = EmbedBuilder::new()
+        .title(title)
+        .description(description)
+        .color(color)
+        .build();
+
+    let payload = MessagePayload::new()
+        .add_embed(embed)
+        .reply(
+            message.channel_id.clone(),
+            message.id.clone(),
+            message.guild_id.clone(),
+        )
+        .build();
+
+    if let Err(e) = message.send(&rest, &payload).await {
+        tracing::error!("send {e}");
+    }
+}
+
                     if message.content.trim() == "!hangup" {
-                        let embed;
-                        if *in_call.lock().unwrap() {
+                        let user_id = message.author.id.to_string();
+                        let (in_call, pair_index) = {
+                            let manager = call_manager.lock().unwrap();
+                            let mut found = false;
+                            let mut idx = usize::MAX;
+                            for (i, (a, b)) in manager.active_calls.iter().enumerate() {
+                                if a == &user_id || b == &user_id {
+                                    found = true;
+                                    idx = i;
+                                    break;
+                                }
+                            }
+                            (found, idx)
+                        };
+
+                        let embed = if in_call {
                             println!("in call was true");
-
-                            *in_call.lock().unwrap() = false;
-
-                            embed = EmbedBuilder::new()
+                            {
+                                let mut manager = call_manager.lock().unwrap();
+                                if pair_index != usize::MAX {
+                                    manager.active_calls.remove(pair_index);
+                                }
+                                manager.user_queue.retain(|id| id != &user_id);
+                            }
+                            EmbedBuilder::new()
                                 .title("Hanging up")
                                 .color(0x27D3F5)
-                                .build();
+                                .build()
                         } else {
                             println!("in call wasn't true");
-
-                            embed = EmbedBuilder::new()
+                            {
+                                let mut manager = call_manager.lock().unwrap();
+                                manager.user_queue.retain(|id| id != &user_id);
+                            }
+                            EmbedBuilder::new()
                                 .title("you weren't in a call")
                                 .color(0x27D3F5)
-                                .build();
-                        }
+                                .build()
+                        };
 
-                        let payload = MessagePayload::new().add_embed(embed).build();
-                        if *in_call.lock().unwrap() {
-                            *in_call.lock().unwrap() = false;
-
-                            println!("in call should be false now");
-
-                            if *in_call.lock().unwrap() {
-                                println!("didn't become false");
-                            }
-                        }
+                        let payload = MessagePayload::new()
+                            .add_embed(embed)
+                            .reply(
+                                message.channel_id.clone(),
+                                message.id.clone(),
+                                message.guild_id.clone(),
+                            )
+                            .build();
 
                         if let Err(e) = message.send(&rest, &payload).await {
                             tracing::error!("send {e}");
