@@ -12,13 +12,11 @@ struct CallManager {
     active_calls: Vec<(String, String)>,
 }
 
-fn pair_waiting_users(manager: &mut CallManager,tx: &mpsc::Sender<(String, String)>) {
+fn pair_waiting_users(manager: &mut CallManager, tx: &mpsc::Sender<(String, String)>) {
     while manager.user_queue.len() >= 2 {
-        let (user1, _guild1, _message1) =
-    manager.user_queue.pop_front().unwrap();
+        let (user1, _guild1, _message1) = manager.user_queue.pop_front().unwrap();
 
-let (user2, _guild2, _message2) =
-    manager.user_queue.pop_front().unwrap();
+        let (user2, _guild2, _message2) = manager.user_queue.pop_front().unwrap();
 
         println!("Pair created: {} <-> {}", user1, user2);
 
@@ -41,8 +39,6 @@ async fn main() {
     }));
 
     let (tx, mut rx) = mpsc::channel::<(String, String)>(100);
-
-    
 
     tracing_subscriber::fmt().with_env_filter("info").init();
 
@@ -87,11 +83,38 @@ async fn main() {
     let _worker_test = rest.clone();
     let call_manager = Arc::clone(&call_manager);
 
-    tokio::spawn(async move{
-        while let Some((user1,user2)) = rx.recv().await {
-            println!("NEW PAIR RECEIVED!");
-            println!("User 1: {}", user1);
-            println!("User 2: {}", user2);
+    // everyone inside owns what it uses hence the move
+    let call_manager_for_spawn = Arc::clone(&call_manager);
+    tokio::spawn(async move {
+        // while let Some((user1, user2)) = rx.recv().await {
+        //     println!("NEW PAIR RECEIVED!");
+        //     println!("User 1: {}", user1);
+        //     println!("User 2: {}", user2);
+        // }
+        while let Some((user1,user2))=rx.recv().await{
+            // keep recieving pairs forever or until tx is dropped and this returns none
+            println!("NEW PAIR RECEIVED :{user1} <-> {user2}");
+
+            let call_manager = Arc::clone(&call_manager_for_spawn);
+
+            // each pair gets its own task
+            tokio::spawn(async move {
+                loop {
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+
+                    let still_active = {
+                        let m = call_manager.lock().unwrap();
+                        m.active_calls.iter().any(|(a, b)| {
+                            (a == &user1 && b == &user2) || (a == &user2 && b == &user1)
+                        })
+                    };
+                    if !still_active {
+                        println!("Pair {user1} <-> {user2} ended");
+                        break;
+                    }
+                }
+            });
+
         }
     });
 
@@ -174,8 +197,6 @@ async fn main() {
                                     Some("https://media1.tenor.com/m/47EjvEixiNUAAAAd/cop-detective.gif".to_string()),
                                 )
                             }
-
-                            
                         };
 
                         let mut embed_builder = EmbedBuilder::new()
