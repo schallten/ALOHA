@@ -33,4 +33,6 @@ Any message that does not start with `!` gets relayed to your partner as
   nobody can push an embedded GIF or a tracking link into your channel.
 - Messages longer than the platform limit are trimmed with `...`.
 
+See [PRIVACY.md](PRIVACY.md) for what the bot does with your data.
+
 **Not ready for big servers yet.**
