@@ -137,8 +137,7 @@ const RELAY_CONTENT_LIMIT: usize = 2000;
 const INVISIBLE: char = '\u{200b}';
 
 /// Messages are relayed into someone else's server, so they must not be able to
-/// ping anyone there. fluxer's message builder has no `allowed_mentions` option,
-/// so we break the mention syntax by hand:
+/// ping anyone there
 ///   "<@123>"          becomes "<" + invisible + "@123>"
 ///   "@everyone"       becomes "@" + invisible + "everyone"
 ///   "@here"           becomes "@" + invisible + "here"
