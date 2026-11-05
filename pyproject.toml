@@ -1,0 +1,9 @@
+[project]
+name = "aloha"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fluxer-py>=0.4.2",
+]
