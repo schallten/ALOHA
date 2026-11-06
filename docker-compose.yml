@@ -1,0 +1,7 @@
+services:
+  aloha:
+    build: .
+    image: aloha
+    env_file:
+      - .env
+    restart: unless-stopped
