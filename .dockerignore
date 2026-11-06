@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+.venv
+__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+legacy/
+aloha.egg-info/
+dist/
+build/

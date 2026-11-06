@@ -37,10 +37,25 @@ See [PRIVACY.md](PRIVACY.md) for what the bot does with your data.
 
 ## Implementation
 
-The bot is currently being rewritten in Python using
+The bot is written in Python using
 [`fluxer.py`](https://github.com/Fluxer-py/fluxer.py). The previous Rust
-implementation (and its Dockerfile) has been moved to `legacy/` for reference;
-it worked, but it was too costly to maintain personally, so the project is
-moving to Python.
+implementation (and its Dockerfile) has been moved to `legacy/` for reference.
+Core behavior from the Rust version (queueing, pairing, relaying, sanitization,
+rate limiting, and caps) has been ported to Python.
 
 **Not ready for big servers yet.**
+
+## Running
+
+Set your token (e.g. `FLUXER_TOKEN` or `FLUXER_TOKEN_TEST`) in the environment or `.env`, then:
+
+```bash
+python main.py
+```
+
+Or with Docker:
+
+```bash
+docker build -t aloha .
+docker run -e FLUXER_TOKEN=your-token aloha
+```

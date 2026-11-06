@@ -149,13 +149,17 @@ wheels = [
 [[package]]
 name = "aloha"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "fluxer-py" },
+    { name = "python-dotenv" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "fluxer-py", specifier = ">=0.4.2" }]
+requires-dist = [
+    { name = "fluxer-py", git = "https://github.com/Fluxer-py/fluxer.py?rev=rework" },
+    { name = "python-dotenv", specifier = ">=1.0" },
+]
 
 [[package]]
 name = "attrs"
@@ -177,15 +181,11 @@ wheels = [
 
 [[package]]
 name = "fluxer-py"
-version = "0.4.2"
-source = { registry = "https://pypi.org/simple" }
+version = "0.5.0a5"
+source = { git = "https://github.com/Fluxer-py/fluxer.py?rev=rework#67572f3b32387def7e8479516702b3df1e3b44cb" }
 dependencies = [
     { name = "aiohttp" },
     { name = "emoji" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c0/ff/0eb77834f48cfa4e675ac5b0866e1828c6a534e1ed4a296b31c653642b61/fluxer_py-0.4.2.tar.gz", hash = "sha256:9d2c9ff636efa535d6c606f504426866428ce3f6495eb47c1f7c98deb9c224b6", size = 58920, upload-time = "2026-03-30T13:11:41.993Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d1/a0/0862f76c0b7ae404c2eaae91ddff6cb95a59dda7eda38acaaa55330ce592/fluxer_py-0.4.2-py3-none-any.whl", hash = "sha256:b4d09b7c7d2d8486d545d39fe3252746da00b236817c86977e31d32f7b2a995b", size = 64494, upload-time = "2026-03-30T13:11:40.836Z" },
 ]
 
 [[package]]
@@ -480,6 +480,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/d4/ef/8bae0a316d406644450522f2f3d44a4e19632f5f3bb60d1d0e6c53842616/propcache-0.5.4-cp315-cp315t-win_amd64.whl", hash = "sha256:02c0a34f16889cf800f10f0247a564d8ce6eeab6ffcd7c87198f769067eb8432", size = 48574, upload-time = "2026-09-16T00:17:10.077Z" },
     { url = "https://files.pythonhosted.org/packages/57/be/bcc053f66a97355683884b448198e79580fae8e8fa4d96b9bb01614e9913/propcache-0.5.4-cp315-cp315t-win_arm64.whl", hash = "sha256:dc4242ca653c9b30ab51c5f8193323e7bc0928f897ee9103201e59a43abcb72e", size = 45625, upload-time = "2026-09-16T00:17:11.377Z" },
     { url = "https://files.pythonhosted.org/packages/f5/cd/785c64ed382f3f04201870267b02783f63b4678c2acfddc177a3ebcc2727/propcache-0.5.4-py3-none-any.whl", hash = "sha256:62c60aec739ed00124573cce1178138fd690c7676352d67a37328c1cf51d7468", size = 16338, upload-time = "2026-09-16T00:17:13.106Z" },
+]
+
+[[package]]
+name = "python-dotenv"
+version = "1.2.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/74/26/2fbeedb218a787a5eea551c7532cac4e009f83d689dd2faa0d0353473f86/python_dotenv-1.2.4.tar.gz", hash = "sha256:f0d53e69935a851c0dcc78f3ab7aaccd8cabef0b92382b576b824212902873c0", size = 60824, upload-time = "2026-10-01T05:36:10Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl", hash = "sha256:42269a8a5b3fd54ffa6f3d84b18abed50064717576b4ecf03dc4a55d8aa04fdc", size = 23266, upload-time = "2026-10-01T05:36:08.633Z" },
 ]
 
 [[package]]

@@ -384,7 +384,7 @@ async fn send_connected_embed(rest: &Rest, pacer: &Pacer, channel_id: &str, part
         .description(format!(
             "You've been connected with <@{partner_id}>!\n\n\
              Say hi, be kind, and please keep it friendly. 💚\n\
-             When you're done, type `!hangup`."
+             When you're done, type `u!hangup`."
         ))
         .color(COLOR_CONNECTED)
         .build();
@@ -405,7 +405,7 @@ async fn announce_hangup(
         .description(format!(
             "<@{hanger_id}> hung up the call.\n\n\
              Hope it was a good chat! If you'd like to talk to someone new, \
-             type `!userphone` to join the queue again."
+             type `u!userphone` to join the queue again."
         ))
         .color(COLOR_DISCONNECTED)
         .build();
@@ -487,7 +487,7 @@ async fn main() {
 
                     let content = message.content.trim().to_string();
 
-                    if !content.starts_with('!') {
+                    if !content.starts_with("u!") {
                         let user_id = message.author.id.to_string();
 
                         let partner_destination = {
@@ -516,7 +516,7 @@ async fn main() {
                         }
                     }
 
-                    if message.content.trim() == "!ping" {
+                    if message.content.trim() == "u!ping" {
                         let embed = EmbedBuilder::new().title("Pong").color(0x5865F2).build();
 
                         let payload = MessagePayload::new()
@@ -533,7 +533,7 @@ async fn main() {
                         }
                     }
 
-                    if message.content.trim() == "!userphone" {
+                    if message.content.trim() == "u!userphone" {
                         println!("user id was {}", message.author.id);
 
                         let user_id = message.author.id.to_string();
@@ -609,7 +609,7 @@ async fn main() {
                                         format!(
                                             "You've been connected with <@{partner}>!\n\n\
                                              Say hi, be kind, and please keep it friendly. 💚\n\
-                                             When you're done, type `!hangup`."
+                                             When you're done, type `u!hangup`."
                                         ),
                                         COLOR_CONNECTED,
                                     )
@@ -663,7 +663,7 @@ async fn main() {
                         }
                     }
 
-                    if message.content.trim() == "!hangup" {
+                    if message.content.trim() == "u!hangup" {
                         let user_id = message.author.id.to_string();
 
                         let (ended_call, new_pairs) = {

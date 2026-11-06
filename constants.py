@@ -1,0 +1,12 @@
+# ALOHA constants (migrated from Rust)
+MAX_ACTIVE_PAIRS = 100
+MAX_QUEUE_SIZE = 200
+MIN_SEND_INTERVAL = 0.5  # seconds
+RELAY_CONTENT_LIMIT = 2000
+INVISIBLE = '\u200b'
+
+COLOR_CONNECTED = 0x2ECC71
+COLOR_DISCONNECTED = 0xE74C3C
+COLOR_INFO = 0x27D3F5
+
+LINK_MARKERS = ["http://", "https://", "www.", "data:"]
