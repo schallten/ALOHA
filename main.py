@@ -1,8 +1,12 @@
 import os
 from collections import deque
+import time
+import aiohttp
 
 from dotenv import load_dotenv
 import fluxer
+
+FLUXER_DISCOVERY = "https://fluxer.com/.well-known/fluxer"
 
 from constants import (
     COMMAND_PREFIX,
@@ -106,11 +110,53 @@ async def on_message(message):
         command = content[len(COMMAND_PREFIX):]
 
         if command == "ping":
-            embed = fluxer.Embed(title="Pong", color=0x5865F2)
             try:
+                start = time.perf_counter()
+
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(FLUXER_DISCOVERY) as response:
+                        discovery = await response.json()
+                        api_url = discovery["endpoints"]["api_public"]
+
+                    api_start = time.perf_counter()
+
+                    async with session.get(
+                        f"{api_url}/v1/applications/@me",
+                        headers={"Authorization":f"Bot {BOT_TOKEN}"}) as response:
+                        await response.read()
+                        api_latency = (time.perf_counter()-api_start)*1000
+                        status = response.status
+
+                total_latency = (time.perf_counter()-start)*1000
+
+                embed = fluxer.Embed(
+                    title="ALOHA Ping",
+                    color=0x57F287 if status == 200 else 0xED4245
+                )
+
+                embed.add_field(
+                    name="API Latency",
+                    value=f"`{api_latency:.2f} ms`",
+                    inline=True
+                )
+
+                embed.add_field(
+                    name="Total Latency",
+                    value=f"`{total_latency:.2f} ms`",
+                    inline=True
+                )
+
+                embed.add_field(
+                    name="API Status",
+                    value=f"`HTTP {status}`",
+                    inline=True
+                )
+
                 await message.reply(embed=embed)
+            
             except Exception as e:
-                print(f"send error {e}")
+                print(f"ping error: {e}")
+                await message.reply("unable to reach fluxer API")
             return
 
         if command == "userphone":
@@ -239,11 +285,14 @@ async def on_message(message):
     except Exception as e:
         print(f"error {e}")
 
+BOT_TOKEN=""
 
 def main():
+    global BOT_TOKEN
     token = os.environ.get("FLUXER_TOKEN_TEST") or os.environ.get("FLUXER_TOKEN")
     if not token:
         raise SystemExit("set FLUXER_TOKEN env var")
+    BOT_TOKEN=token
     bot.run(token)
 
 
