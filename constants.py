@@ -1,4 +1,5 @@
 # ALOHA constants (migrated from Rust)
+COMMAND_PREFIX = "u!"  # the only accepted command prefix; bare `!cmd` is not a command
 MAX_ACTIVE_PAIRS = 100
 MAX_QUEUE_SIZE = 200
 MIN_SEND_INTERVAL = 0.5  # seconds

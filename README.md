@@ -13,11 +13,12 @@ your partner's channel, and theirs to yours, until one of you hangs up.
 
 | Command | What it does |
 | --- | --- |
-| `!userphone` | Join the queue. If someone is already waiting, you get paired with them right away. |
-| `!hangup` | End the call. Your partner is told you hung up. |
-| `!ping` | Health check. |
+| `u!userphone` | Join the queue. If someone is already waiting, you get paired with them right away. |
+| `u!hangup` | End the call. Your partner is told you hung up. |
+| `u!ping` | Health check. |
+| `u!help` | Show the command list. |
 
-Any message that does not start with `!` gets relayed to your partner as
+Any message that does not start with `u!` gets relayed to your partner as
 `**yourname:** your message`.
 
 ## Notes

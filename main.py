@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import fluxer
 
 from constants import (
+    COMMAND_PREFIX,
     MAX_ACTIVE_PAIRS,
     MAX_QUEUE_SIZE,
     MIN_SEND_INTERVAL,
@@ -23,7 +24,7 @@ load_dotenv()
 # sends {"custom_status": {"text": ...}}, which is what Fluxer renders.
 # Use fluxer.Client, NOT fluxer.Bot: Bot (ext.commands) auto-processes
 # `u!...` messages as commands and logs CommandNotFound for our manually-
-# handled !userphone/!hangup. Client has change_presence() too, but no
+# handled u!userphone/u!hangup. Client has change_presence() too, but no
 # command processing, so on_message below is the only handler.
 bot = fluxer.Client()
 
@@ -59,7 +60,7 @@ async def send_to_channel_http(channel_id, content=None, embed=None):
 async def send_connected_embed(channel_id, partner_id):
     embed = fluxer.Embed(
         title="Connection Found ☎️",
-        description=f"You've been connected with <@{partner_id}>!\n\nSay hi, be kind, and please keep it friendly. 💚\nWhen you're done, type `!hangup`.",
+        description=f"You've been connected with <@{partner_id}>!\n\nSay hi, be kind, and please keep it friendly. 💚\nWhen you're done, type `u!hangup`.",
         color=COLOR_CONNECTED,
     )
     await send_to_channel_http(channel_id, embed=embed)
@@ -68,7 +69,7 @@ async def send_connected_embed(channel_id, partner_id):
 async def announce_hangup(partner_id, partner_channel, hanger_id):
     embed = fluxer.Embed(
         title="Call Ended",
-        description=f"<@{hanger_id}> hung up the call.\n\nHope it was a good chat! If you'd like to talk to someone new, type `!userphone` to join the queue again.",
+        description=f"<@{hanger_id}> hung up the call.\n\nHope it was a good chat! If you'd like to talk to someone new, type `u!userphone` to join the queue again.",
         color=COLOR_DISCONNECTED,
     )
     await send_to_channel_http(partner_channel, embed=embed)
@@ -80,13 +81,12 @@ async def on_message(message):
         if message.author == bot.user:
             return
         content = (message.content or "").strip()
-        # Presence advertises `u!userphone`, handlers below check `!cmd` --
-        # accept both spellings.
-        if content.startswith("u!"):
-            content = content[1:]
         user_id = str(message.author.id)
 
-        if not content.startswith('!'):
+        # Only `u!` is a command prefix. Anything else -- including a bare
+        # `!help`/`!ping`/etc. -- is ordinary chat: relay it to a call
+        # partner if there is one, otherwise ignore it.
+        if not content.startswith(COMMAND_PREFIX):
             partner_dest = None
             for call in call_manager.active_calls:
                 pd = call.partner_destination(user_id)
@@ -103,7 +103,9 @@ async def on_message(message):
                     print(f"relay error {e}")
             return
 
-        if content == "!ping":
+        command = content[len(COMMAND_PREFIX):]
+
+        if command == "ping":
             embed = fluxer.Embed(title="Pong", color=0x5865F2)
             try:
                 await message.reply(embed=embed)
@@ -111,7 +113,7 @@ async def on_message(message):
                 print(f"send error {e}")
             return
 
-        if content == "!userphone":
+        if command == "userphone":
             new_pairs = []
             title = ""
             description = ""
@@ -156,7 +158,7 @@ async def on_message(message):
                 if paired is not None:
                     partner = paired.user2 if paired.user1 == user_id else paired.user1
                     title = "Connection Found ☎️"
-                    description = f"You've been connected with <@{partner}>!\n\nSay hi, be kind, and please keep it friendly. 💚\nWhen you're done, type `!hangup`."
+                    description = f"You've been connected with <@{partner}>!\n\nSay hi, be kind, and please keep it friendly. 💚\nWhen you're done, type `u!hangup`."
                     color = COLOR_CONNECTED
                 else:
                     title = "Successfully Joined"
@@ -180,7 +182,7 @@ async def on_message(message):
                     await send_connected_embed(call.channel2, call.user1)
             return
 
-        if content == "!hangup":
+        if command == "hangup":
             ended_call = None
             for i, c in enumerate(call_manager.active_calls):
                 if c.contains(user_id):
@@ -214,6 +216,24 @@ async def on_message(message):
             for call in new_pairs:
                 await send_connected_embed(call.channel1, call.user2)
                 await send_connected_embed(call.channel2, call.user1)
+            return
+
+        if command == "help":
+            embed = fluxer.Embed(
+                title="ALOHA Help",
+                description=(
+                    "`u!userphone` — join the queue and get paired with someone\n"
+                    "`u!hangup` — end your current call\n"
+                    "`u!ping` — check the bot is alive\n"
+                    "`u!help` — this message\n\n"
+                    "Any other message is relayed to your call partner."
+                ),
+                color=COLOR_INFO,
+            )
+            try:
+                await message.reply(embed=embed)
+            except Exception as e:
+                print(f"send error {e}")
             return
 
     except Exception as e:

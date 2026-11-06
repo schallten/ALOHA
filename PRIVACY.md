@@ -10,7 +10,7 @@ description of the software, not legal advice.
 ## What the bot processes
 
 - **IDs.** Your user ID, the channel ID and the guild ID where you ran
-  `!userphone`. These are needed to know who to pair and where to deliver.
+  `u!userphone`. These are needed to know who to pair and where to deliver.
 - **Message text.** Messages you send while a call is active are read so they can
   be forwarded to your partner's channel.
 - **Nothing else.** No email, no password, no profile data, no attachments
@@ -21,7 +21,7 @@ description of the software, not legal advice.
 - **In memory only.** The IDs above live in the running bot process while you are
   queued or in a call. There is no database and no file storage.
 - **Cleared automatically.** The entry is removed when either person runs
-  `!hangup`, and everything is lost when the bot restarts.
+  `u!hangup`, and everything is lost when the bot restarts.
 - **Message text is not stored.** It passes through memory on its way to your
   partner. The copy you see in their channel is a normal message in that channel,
   stored by the platform like any other message — not by the bot.
