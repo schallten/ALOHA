@@ -1,3 +1,5 @@
+import asyncio
+import itertools
 import os
 from collections import deque
 import time
@@ -13,6 +15,8 @@ from constants import (
     MAX_ACTIVE_PAIRS,
     MAX_QUEUE_SIZE,
     MIN_SEND_INTERVAL,
+    STATUSES,
+    STATUS_ROTATE_INTERVAL,
     COLOR_CONNECTED,
     COLOR_DISCONNECTED,
     COLOR_INFO,
@@ -30,21 +34,66 @@ load_dotenv()
 # `u!...` messages as commands and logs CommandNotFound for our manually-
 # handled u!userphone/u!hangup. Client has change_presence() too, but no
 # command processing, so on_message below is the only handler.
-bot = fluxer.Client()
+# ALOHA never reads guild/member/message caches (only id/username/channel
+# from the event payload), so don't retain them: saves RAM that would
+# otherwise grow with guild member counts and message history.
+bot = fluxer.Client(cache_members=False, max_messages=0)
 
 call_manager = CallManager()
 pacer = Pacer(MIN_SEND_INTERVAL)
 
+_status_cycle = itertools.cycle(STATUSES)
+_current_status = next(_status_cycle)
+_status_task = None
+
+
+def _dynamic_status() -> str:
+    talking = len(call_manager.active_calls) * 2
+    queued = len(call_manager.user_queue)
+    return f"{talking} talking | {queued} queued - u!userphone"
+
+
+def _serving_status() -> str:
+    # Combined member counts across all guilds (not unique users served):
+    # a person in 2 guilds counts twice, by design.
+    guilds = bot.guilds
+    users = sum(g.member_count or g.approximate_member_count or 0 for g in guilds)
+    return f"Serving {len(guilds)} guilds | {users} users"
+
+
+async def _rotate_status():
+    global _current_status
+    tick = 0
+    while True:
+        await asyncio.sleep(STATUS_ROTATE_INTERVAL)
+        tick += 1
+        # Cycle: static, live talking/queued, serving guilds/users, repeat.
+        if tick % 3 == 2:
+            _current_status = _dynamic_status()
+        elif tick % 3 == 0:
+            _current_status = _serving_status()
+        else:
+            _current_status = next(_status_cycle)
+        try:
+            await bot.change_presence(activity=_current_status)
+        except Exception as e:
+            print(f"presence rotate error {e}")
+
 
 @bot.event
 async def on_ready():
+    global _status_task
     print(f"ALOHA is online as {bot.user.username}")
-    await bot.change_presence(activity="u!userphone - tell your friends about me")
+    await bot.change_presence(activity=_current_status)
+    if _status_task is None or _status_task.done():
+        _status_task = asyncio.create_task(_rotate_status())
 
 
 @bot.event
 async def on_resumed():
-    await bot.change_presence(activity="u!userphone - tell your friends about me")
+    # Re-assert the current status on reconnect; the rotation task
+    # keeps running and will advance it on its normal 4m20s tick.
+    await bot.change_presence(activity=_current_status)
 
 
 async def send_to_channel_http(channel_id, content=None, embed=None):
