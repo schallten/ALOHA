@@ -15,6 +15,9 @@ from constants import (
     MAX_ACTIVE_PAIRS,
     MAX_QUEUE_SIZE,
     MIN_SEND_INTERVAL,
+    QUEUE_TIMEOUT,
+    CALL_IDLE_TIMEOUT,
+    SWEEP_INTERVAL,
     STATUSES,
     STATUS_ROTATE_INTERVAL,
     COLOR_CONNECTED,
@@ -45,6 +48,7 @@ pacer = Pacer(MIN_SEND_INTERVAL)
 _status_cycle = itertools.cycle(STATUSES)
 _current_status = next(_status_cycle)
 _status_task = None
+_sweeper_task = None
 
 
 def _dynamic_status() -> str:
@@ -82,11 +86,13 @@ async def _rotate_status():
 
 @bot.event
 async def on_ready():
-    global _status_task
+    global _status_task, _sweeper_task
     print(f"ALOHA is online as {bot.user.username}")
     await bot.change_presence(activity=_current_status)
     if _status_task is None or _status_task.done():
         _status_task = asyncio.create_task(_rotate_status())
+    if _sweeper_task is None or _sweeper_task.done():
+        _sweeper_task = asyncio.create_task(_sweep_timeouts())
 
 
 @bot.event
@@ -128,6 +134,44 @@ async def announce_hangup(partner_id, partner_channel, hanger_id):
     await send_to_channel_http(partner_channel, embed=embed)
 
 
+async def _sweep_timeouts():
+    while True:
+        await asyncio.sleep(SWEEP_INTERVAL)
+        now = time.monotonic()
+        expired_queue = [q for q in call_manager.user_queue if now - q[3] >= QUEUE_TIMEOUT]
+        if expired_queue:
+            call_manager.user_queue = deque(
+                q for q in call_manager.user_queue if now - q[3] < QUEUE_TIMEOUT
+            )
+            for user_id, channel_id, _guild_id, _enqueued_at in expired_queue:
+                embed = fluxer.Embed(
+                    title="Removed from Queue",
+                    description=f"<@{user_id}> you were removed from the queue after 2 minutes of waiting.\nType `u!userphone` to join again.",
+                    color=COLOR_DISCONNECTED,
+                )
+                await send_to_channel_http(channel_id, embed=embed)
+        expired_calls = [
+            c for c in call_manager.active_calls
+            if now - c.last_message_at >= CALL_IDLE_TIMEOUT
+        ]
+        if expired_calls:
+            call_manager.active_calls = [
+                c for c in call_manager.active_calls if c not in expired_calls
+            ]
+            new_pairs = pair_waiting_users(call_manager, MAX_ACTIVE_PAIRS)
+            for call in expired_calls:
+                for channel_id, partner_id in ((call.channel1, call.user2), (call.channel2, call.user1)):
+                    embed = fluxer.Embed(
+                        title="Call Ended",
+                        description=f"<@{partner_id}> your call was ended after 5 minutes without a message.\nType `u!userphone` to talk to someone new.",
+                        color=COLOR_DISCONNECTED,
+                    )
+                    await send_to_channel_http(channel_id, embed=embed)
+            for call in new_pairs:
+                await send_connected_embed(call.channel1, call.user2)
+                await send_connected_embed(call.channel2, call.user1)
+
+
 @bot.event
 async def on_message(message):
     try:
@@ -144,6 +188,7 @@ async def on_message(message):
             for call in call_manager.active_calls:
                 pd = call.partner_destination(user_id)
                 if pd is not None:
+                    call.last_message_at = time.monotonic()
                     partner_dest = pd
                     break
             if partner_dest is not None:
@@ -243,7 +288,7 @@ async def on_message(message):
                 image_url = "https://media1.tenor.com/m/v52lOlHNtjAAAAAd/ronaldo-cheeky-boy.gif"
             else:
                 guild_id = str(message.guild_id) if message.guild_id is not None else ""
-                call_manager.user_queue.append((user_id, str(message.channel_id), guild_id))
+                call_manager.user_queue.append((user_id, str(message.channel_id), guild_id, time.monotonic()))
                 new_pairs = pair_waiting_users(call_manager, MAX_ACTIVE_PAIRS)
                 paired = None
                 for p in new_pairs:

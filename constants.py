@@ -3,6 +3,9 @@ COMMAND_PREFIX = "u!"  # the only accepted command prefix; bare `!cmd` is not a 
 MAX_ACTIVE_PAIRS = 100
 MAX_QUEUE_SIZE = 200
 MIN_SEND_INTERVAL = 0.5  # seconds
+QUEUE_TIMEOUT = 120  # seconds
+CALL_IDLE_TIMEOUT = 300  # seconds
+SWEEP_INTERVAL = 15  # seconds
 STATUS_ROTATE_INTERVAL = 4 * 60 + 20  # seconds (4 minutes 20 seconds)
 STATUSES = [
     "u!userphone - tell your friends about me",

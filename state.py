@@ -1,3 +1,4 @@
+import time
 from collections import deque
 
 
@@ -9,6 +10,7 @@ class Call:
         self.user2 = str(user2)
         self.channel2 = str(channel2)
         self.guild2 = str(guild2) if guild2 is not None else ""
+        self.last_message_at = time.monotonic()
 
     def partner_destination(self, user_id):
         user_id = str(user_id)
@@ -32,8 +34,8 @@ class CallManager:
 def pair_waiting_users(manager, max_active_pairs):
     new_pairs = []
     while len(manager.user_queue) >= 2 and len(manager.active_calls) < max_active_pairs:
-        user1, channel1, guild1 = manager.user_queue.popleft()
-        user2, channel2, guild2 = manager.user_queue.popleft()
+        user1, channel1, guild1, _ = manager.user_queue.popleft()
+        user2, channel2, guild2, _ = manager.user_queue.popleft()
         call = Call(user1, channel1, guild1, user2, channel2, guild2)
         manager.active_calls.append(call)
         new_pairs.append(call)
